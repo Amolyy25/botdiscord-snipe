@@ -1,0 +1,20 @@
+{
+  "users": {
+    "1172869002670903422": {
+      "reason": "Aucune raison fournie",
+      "by": "809845715144671242",
+      "at": 1772198569096,
+      "status": "unblacklisted",
+      "unblBy": "809845715144671242",
+      "unblAt": 1772198790599
+    },
+    "714223025645682860": {
+      "reason": "Aucune raison fournie",
+      "by": "809845715144671242",
+      "at": 1772203771922,
+      "status": "unblacklisted",
+      "unblBy": "809845715144671242",
+      "unblAt": 1772204027782
+    }
+  }
+}
