@@ -117,6 +117,17 @@ export async function saveStatsSetup(guildId, channelId, messageId) {
 }
 
 // ---------------------------------------------------------------------------
+// Setup — récupérer la configuration d'un guild (pour le re-setup)
+// ---------------------------------------------------------------------------
+export async function getStatsSetup(guildId) {
+  const { rows } = await pool.query(
+    `SELECT guild_id, channel_id, message_id FROM stats_setup WHERE guild_id = $1`,
+    [guildId],
+  );
+  return rows[0] || null; // { guild_id, channel_id, message_id } ou null
+}
+
+// ---------------------------------------------------------------------------
 // Setup — récupérer toutes les configurations (pour le cron)
 // ---------------------------------------------------------------------------
 export async function getAllStatsSetups() {
