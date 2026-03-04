@@ -17,6 +17,16 @@ import {
 } from "discord.js";
 import { fileURLToPath } from "node:url";
 import { handleFindCommand } from "./commands/find.js";
+import { handleSetupStats } from "./commands/setupstats.js";
+import {
+  initStatsDB,
+  recordTextMessage,
+  recordVoiceMinutes,
+  getTopText,
+  getTopVoice,
+  getAllStatsSetups,
+  purgeOldStats,
+} from "./statsHelper.js";
 
 const TOKEN = process.env.TOKEN;
 const PREFIX = process.env.PREFIX || "=";
@@ -83,6 +93,19 @@ client.saveBlacklistEntry = (userId, data) => {
 client.getBlacklistEntry = (userId) => {
   return client.blacklist.users?.[userId] || null;
 };
+
+// ---------------------------------------------------------------------------
+// Stats texte — comptabilise les messages valides (hors bots, hors commandes, >= 5 chars)
+// ---------------------------------------------------------------------------
+client.on(Events.MessageCreate, async (message) => {
+  if (!message.author.bot && message.guild) {
+    const content = message.content.trim();
+    const isCommand = content.startsWith(PREFIX) || content.startsWith("/");
+    if (!isCommand && content.length >= 5) {
+      recordTextMessage(message.guild.id, message.author.id).catch(() => {});
+    }
+  }
+});
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
@@ -234,6 +257,11 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
+  if (commandName === "setupstats") {
+    await handleSetupStats(message);
+    return;
+  }
+
   // Setup UNBL via préfixe (sur le serveur UNBL uniquement)
   if (commandName === "setup-unbl") {
     if (!APPEAL_GUILD_ID || message.guild.id !== APPEAL_GUILD_ID) {
@@ -309,8 +337,11 @@ client.saveCountersConfig = () => saveConfig(client.countersConfig);
 client.setGuildCounter = (guild, field, value) =>
   setGuildCounter(guild, field, value);
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+  await initStatsDB();
+  startVoiceTracker();
+  startStatsCronJob();
 });
 
 async function updateCountersForGuild(guild) {
@@ -523,6 +554,161 @@ async function handleUnclaimUnblTicket(interaction) {
   await channel.permissionOverwrites.delete(member.id).catch(() => null);
 
   return interaction.reply(`${member} a unclaim ce ticket.`);
+}
+
+// ---------------------------------------------------------------------------
+// Tracking vocal en mémoire
+// Map: userId => { guildId, joinTime }
+// ---------------------------------------------------------------------------
+const activeSessions = new Map();
+
+function isValidVoiceSession(member, channel) {
+  if (!member || !channel) return false;
+  // doit avoir au moins 1 autre humain
+  const humans = channel.members.filter((m) => !m.user.bot);
+  if (humans.size < 2) return false;
+  // ne doit pas être mute/deafened (côté serveur ou client)
+  if (member.voice.mute || member.voice.deaf) return false;
+  return true;
+}
+
+function startVoiceTracker() {
+  // Tick toutes les 60 secondes pour tracker 1 minute de vocal
+  setInterval(async () => {
+    for (const [userId, session] of activeSessions.entries()) {
+      try {
+        const guild = client.guilds.cache.get(session.guildId);
+        if (!guild) continue;
+        const member = guild.members.cache.get(userId);
+        if (!member || !member.voice.channel) {
+          activeSessions.delete(userId);
+          continue;
+        }
+        if (isValidVoiceSession(member, member.voice.channel)) {
+          await recordVoiceMinutes(session.guildId, userId, 1);
+        }
+      } catch {
+        // silencieux
+      }
+    }
+  }, 60 * 1000);
+}
+
+// Rejoindre / quitter un vocal
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  const userId = newState.member?.user?.id || oldState.member?.user?.id;
+  if (!userId) return;
+  const member = newState.member || oldState.member;
+  if (member?.user?.bot) return;
+
+  const joined = !oldState.channel && newState.channel;
+  const left = oldState.channel && !newState.channel;
+  const moved = oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id;
+
+  if (joined || moved) {
+    activeSessions.set(userId, {
+      guildId: newState.guild.id,
+    });
+  } else if (left) {
+    activeSessions.delete(userId);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Cron job — mise à jour de l'embed toutes les 60 minutes
+// ---------------------------------------------------------------------------
+async function buildStatsEmbed(guild, topText, topVoice) {
+  const resolveUsername = async (userId) => {
+    try {
+      const member = await guild.members.fetch(userId).catch(() => null);
+      if (member) return member.displayName;
+      const user = await guild.client.users.fetch(userId).catch(() => null);
+      return user ? user.username : `Utilisateur`;
+    } catch {
+      return `Utilisateur`;
+    }
+  };
+
+  // Top textuel
+  let textLines = "";
+  if (topText.length === 0) {
+    textLines = "*Aucune donnée*";
+  } else {
+    for (let i = 0; i < topText.length; i++) {
+      const row = topText[i];
+      const name = await resolveUsername(row.user_id);
+      const rank = String(i + 1).padStart(2, "0");
+      textLines += `${rank}. ${name} — ${row.total} messages\n`;
+    }
+  }
+
+  // Top vocal
+  let voiceLines = "";
+  if (topVoice.length === 0) {
+    voiceLines = "*Aucune donnée*";
+  } else {
+    for (let i = 0; i < topVoice.length; i++) {
+      const row = topVoice[i];
+      const name = await resolveUsername(row.user_id);
+      const rank = String(i + 1).padStart(2, "0");
+      const totalMin = parseInt(row.total_minutes, 10);
+      const hours = Math.floor(totalMin / 60);
+      const mins = totalMin % 60;
+      const timeStr = hours > 0 ? `${hours}h ${mins}min` : `${mins}min`;
+      voiceLines += `${rank}. ${name} — ${timeStr}\n`;
+    }
+  }
+
+  return new EmbedBuilder()
+    .setColor(0xffffff)
+    .setTitle("CLASSEMENT ACTIVITE | 14 JOURS")
+    .addFields(
+      {
+        name: "TOP 10 TEXTUEL",
+        value: textLines.trim() || "*Aucune donnée*",
+        inline: true,
+      },
+      {
+        name: "TOP 10 VOCAL",
+        value: voiceLines.trim() || "*Aucune donnée*",
+        inline: true,
+      }
+    )
+    .setFooter({
+      text: "Actualise toutes les heures. La performance est la seule règle.",
+    });
+}
+
+async function updateStatsEmbeds() {
+  const setups = await getAllStatsSetups().catch(() => []);
+  for (const setup of setups) {
+    try {
+      const guild = client.guilds.cache.get(setup.guild_id);
+      if (!guild) continue;
+      const channel = guild.channels.cache.get(setup.channel_id);
+      if (!channel) continue;
+      const msg = await channel.messages.fetch(setup.message_id).catch(() => null);
+      if (!msg) continue;
+
+      const [topText, topVoice] = await Promise.all([
+        getTopText(setup.guild_id),
+        getTopVoice(setup.guild_id),
+      ]);
+
+      const embed = await buildStatsEmbed(guild, topText, topVoice);
+      await msg.edit({ embeds: [embed] });
+    } catch (err) {
+      console.error(`[Stats] Erreur mise à jour embed: ${err}`);
+    }
+  }
+  await purgeOldStats().catch(() => {});
+}
+
+function startStatsCronJob() {
+  // Première mise à jour 5 secondes après le démarrage
+  setTimeout(() => updateStatsEmbeds(), 5000);
+  // Puis toutes les 60 minutes
+  setInterval(() => updateStatsEmbeds(), 60 * 60 * 1000);
 }
 
 client.commands = new Collection();
