@@ -11,11 +11,11 @@ const members = {
     .setDescription("Avoir la liste de membres"),
   async execute(interaction) {
     await interaction.guild.members.fetch();
-    const member = interaction.guild.memberCount;
+    const totalMembers = interaction.guild.members.cache.filter(m => !m.user.bot).size;
 
     const memberEmbed = new EmbedBuilder()
       .setColor(0xffffff)
-      .setDescription(`**Il y a actuellement ${member} membres**`);
+      .setDescription(`**Il y a actuellement ${totalMembers} membres (hors bots)**`);
     interaction.reply({ embeds: [memberEmbed] });
   },
 };

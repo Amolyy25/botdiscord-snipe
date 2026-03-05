@@ -350,7 +350,7 @@ async function updateCountersForGuild(guild) {
   if (counters.memberCounterChannelId) {
     const channel = guild.channels.cache.get(counters.memberCounterChannelId);
     if (channel) {
-      const members = guild.memberCount;
+      const members = guild.members.cache.filter((m) => !m.user.bot).size;
       await channel.setName(`│🚀・Membres : ${members}`);
     }
   }

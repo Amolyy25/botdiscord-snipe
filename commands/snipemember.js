@@ -18,7 +18,8 @@ const snipemember = {
         .setRequired(true),
     ),
   async execute(interaction) {
-    const members = interaction.guild.memberCount;
+    await interaction.guild.members.fetch();
+    const members = interaction.guild.members.cache.filter((m) => !m.user.bot).size;
     const voiceChannelName = `│🚀・Membres : ${members}`;
     const voice = interaction.options.getString("nom");
 
