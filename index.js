@@ -25,6 +25,7 @@ import {
   getTopText,
   getTopVoice,
   getAllStatsSetups,
+  getTotalVoiceMinutes,
   purgeOldStats,
 } from "./statsHelper.js";
 
@@ -340,7 +341,22 @@ client.setGuildCounter = (guild, field, value) =>
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
   await initStatsDB();
+
+  // Initialisation des sessions actives pour les membres déjà en vocal
+  for (const guild of readyClient.guilds.cache.values()) {
+    for (const channel of guild.channels.cache.values()) {
+      if (channel.isVoiceBased()) {
+        for (const member of channel.members.values()) {
+          if (!member.user.bot) {
+            activeSessions.set(member.id, { guildId: guild.id });
+          }
+        }
+      }
+    }
+  }
+
   startVoiceTracker();
+  startVoiceLevelCron();
   startStatsCronJob();
 });
 
@@ -562,13 +578,28 @@ async function handleUnclaimUnblTicket(interaction) {
 // ---------------------------------------------------------------------------
 const activeSessions = new Map();
 
+const VOICE_LEVELS = [
+  { minutes: 180, roleId: "1479419239176736789", name: "Murmure d'Argent", unlock: "" },
+  { minutes: 300, roleId: "1474150157216907446", name: "Cristal", unlock: "Salon VIP" },
+  { minutes: 600, roleId: "1474149468176912497", name: "Aura Divine", unlock: "Perm I", extraRole: "1469071689756442805" },
+  { minutes: 1200, roleId: "1473735200604426416", name: "Ciel Rosé", unlock: "-banner" },
+  { minutes: 1800, roleId: "1474149732124463379", name: "Spectre d'Or", unlock: "-pic" },
+  { minutes: 3000, roleId: "1473734999608918077", name: "Bras Droit", unlock: "-fake" },
+];
+
 function isValidVoiceSession(member, channel) {
   if (!member || !channel) return false;
   // doit avoir au moins 1 autre humain
   const humans = channel.members.filter((m) => !m.user.bot);
   if (humans.size < 2) return false;
   // ne doit pas être mute/deafened (côté serveur ou client)
-  if (member.voice.mute || member.voice.deaf) return false;
+  if (
+    member.voice.mute ||
+    member.voice.deaf ||
+    member.voice.selfMute ||
+    member.voice.selfDeaf
+  )
+    return false;
   return true;
 }
 
@@ -579,7 +610,7 @@ function startVoiceTracker() {
       try {
         const guild = client.guilds.cache.get(session.guildId);
         if (!guild) continue;
-        const member = guild.members.cache.get(userId);
+        const member = await guild.members.fetch(userId).catch(() => null);
         if (!member || !member.voice.channel) {
           activeSessions.delete(userId);
           continue;
@@ -592,6 +623,84 @@ function startVoiceTracker() {
       }
     }
   }, 60 * 1000);
+}
+
+async function checkVoiceLevels() {
+  console.log("[VoiceLevel] Vérification des rôles...");
+  for (const guild of client.guilds.cache.values()) {
+    const voiceChannels = guild.channels.cache.filter((c) => c.isVoiceBased());
+    const membersInVoice = new Set();
+
+    for (const channel of voiceChannels.values()) {
+      for (const member of channel.members.values()) {
+        if (!member.user.bot) {
+          membersInVoice.add(member);
+        }
+      }
+    }
+
+    for (const member of membersInVoice) {
+      try {
+        const totalMinutes = await getTotalVoiceMinutes(guild.id, member.id);
+        const memberRoles = member.roles.cache;
+
+        for (const level of VOICE_LEVELS) {
+          if (totalMinutes >= level.minutes) {
+            let addedAny = false;
+
+            // Ajouter le rôle principal si manquant
+            if (!memberRoles.has(level.roleId)) {
+              await member.roles.add(level.roleId).catch(() => null);
+              addedAny = true;
+            }
+
+            // Ajouter le rôle extra si spécifié (ex: Perm I)
+            if (level.extraRole && !memberRoles.has(level.extraRole)) {
+              await member.roles.add(level.extraRole).catch(() => null);
+              addedAny = true;
+            }
+
+            // Notification si on vient d'ajouter un rôle
+            if (addedAny) {
+              const voiceChannel = member.voice.channel;
+              if (voiceChannel && voiceChannel.id) {
+                const embed = new EmbedBuilder()
+                  .setColor(0xffffff)
+                  .setTitle("PALLIER ATTEINT !")
+                  .setDescription(
+                    `Félicitations <@${member.id}>, tu as passé le palier des **${Math.floor(level.minutes / 60)}h** de vocal !`,
+                  )
+                  .addFields({
+                    name: "Récompense",
+                    value: `Rôle: **${level.name}**${level.unlock ? `\nUnlock: **${level.unlock}**` : ""}`,
+                  })
+                  .setFooter({ text: "Ce message se supprimera dans 10 secondes." });
+
+                // Envoyer dans le chat du salon vocal
+                try {
+                  const msg = await voiceChannel.send({ embeds: [embed] });
+                  setTimeout(() => msg.delete().catch(() => null), 10000);
+                } catch {
+                  // Fallback si pas de permission d'envoyer dans le vocal (certaines configs Discord)
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error(
+          `Erreur checkVoiceLevels pour ${member.user.tag}: ${err.message}`,
+        );
+      }
+    }
+  }
+}
+
+function startVoiceLevelCron() {
+  // Toutes les 10 minutes
+  setInterval(() => checkVoiceLevels(), 10 * 60 * 1000);
+  // Un premier check au démarrage
+  setTimeout(() => checkVoiceLevels(), 15000);
 }
 
 // Rejoindre / quitter un vocal

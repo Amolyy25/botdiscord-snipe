@@ -138,6 +138,19 @@ export async function getAllStatsSetups() {
 }
 
 // ---------------------------------------------------------------------------
+// Voix — récupérer le total cumulé d'un utilisateur
+// ---------------------------------------------------------------------------
+export async function getTotalVoiceMinutes(guildId, userId) {
+  const { rows } = await pool.query(
+    `SELECT SUM(minutes) AS total_minutes
+     FROM stats_voice
+     WHERE guild_id = $1 AND user_id = $2`,
+    [guildId, userId],
+  );
+  return parseInt(rows[0]?.total_minutes || 0, 10);
+}
+
+// ---------------------------------------------------------------------------
 // Nettoyage — supprimer les entrées > 14 jours (optionnel, les requêtes filtrent déjà)
 // ---------------------------------------------------------------------------
 export async function purgeOldStats() {
