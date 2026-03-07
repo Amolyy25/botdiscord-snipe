@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  SlashCommandBuilder,
 } from "discord.js";
 
 export const handleSetupAccueil = async (input) => {
@@ -101,10 +102,10 @@ export const handleSetupAccueil = async (input) => {
 };
 
 const setupaccueil = {
-  data: {
-    name: "setupaccueil",
-    description: "Configure le salon d'accueil",
-  },
+  data: new SlashCommandBuilder()
+    .setName("setupaccueil")
+    .setDescription("Configure le salon d'accueil")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
@@ -114,8 +115,8 @@ const setupaccueil = {
     }
     // Appel direct pour la version Slash si besoin (même logique que handleSetupAccueil mais pour interaction)
     // Pour simplifier, on peut réutiliser la logique ou juste répondre via l'interaction
-    await handleSetupAccueil(interaction); 
-  }
+    await handleSetupAccueil(interaction);
+  },
 };
 
 export default setupaccueil;
