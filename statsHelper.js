@@ -159,4 +159,54 @@ export async function purgeOldStats() {
   await pool.query(`DELETE FROM stats_voice WHERE recorded_at < $1`, [since]);
 }
 
+// ---------------------------------------------------------------------------
+// Stats — récupérer les statistiques d'un utilisateur spécifique
+// ---------------------------------------------------------------------------
+export async function getUserStats(guildId, userId) {
+  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  // Total messages (text) - last 14 days
+  const { rows: textRows14 } = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM stats_text
+     WHERE guild_id = $1 AND user_id = $2 AND recorded_at >= $3`,
+    [guildId, userId, since],
+  );
+
+  // Total messages (text) - all time
+  const { rows: textRowsAll } = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM stats_text
+     WHERE guild_id = $1 AND user_id = $2`,
+    [guildId, userId],
+  );
+
+  // Voice minutes - last 14 days
+  const { rows: voiceRows14 } = await pool.query(
+    `SELECT SUM(minutes) AS total_minutes
+     FROM stats_voice
+     WHERE guild_id = $1 AND user_id = $2 AND recorded_at >= $3`,
+    [guildId, userId, since],
+  );
+
+  // Voice minutes - all time
+  const { rows: voiceRowsAll } = await pool.query(
+    `SELECT SUM(minutes) AS total_minutes
+     FROM stats_voice
+     WHERE guild_id = $1 AND user_id = $2`,
+    [guildId, userId],
+  );
+
+  return {
+    text: {
+      all: parseInt(textRowsAll[0]?.total || 0, 10),
+      last14: parseInt(textRows14[0]?.total || 0, 10),
+    },
+    voice: {
+      all: parseInt(voiceRowsAll[0]?.total_minutes || 0, 10),
+      last14: parseInt(voiceRows14[0]?.total_minutes || 0, 10),
+    },
+  };
+}
+
 export { pool };

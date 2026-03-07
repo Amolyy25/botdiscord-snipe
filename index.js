@@ -18,6 +18,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { handleFindCommand } from "./commands/find.js";
 import { handleSetupStats } from "./commands/setupstats.js";
+import { handleStatsCommand } from "./commands/stats.js";
 import {
   initStatsDB,
   recordTextMessage,
@@ -260,6 +261,11 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (commandName === "setupstats") {
     await handleSetupStats(message);
+    return;
+  }
+
+  if (commandName === "stats") {
+    await handleStatsCommand(message, args);
     return;
   }
 
