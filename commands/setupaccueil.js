@@ -46,14 +46,14 @@ export const handleSetupAccueil = async (input) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x000000) // Un noir "sobre" pour le minimalisme
+    .setColor(0xFFFFFF) // Un noir "sobre" pour le minimalisme
     .setTitle("BIENVENUE SUR LE SECTEUR")
     .setDescription(
       `Bienvenue dans notre communauté en constante évolution ! Découvre ci-dessous tout ce que le serveur a à t'offrir.`
     )
     .addFields(
       {
-        name: "🎰 LE CASINO",
+        name: "<a:1476213141183660104:1477056275501154304>  LE CASINO",
         value:
           `Pour y accéder, rendez-vous ici : <#1469071692348264634>\n\n` +
           `**Fonctionnement & Gains :**\n` +
@@ -69,27 +69,27 @@ export const handleSetupAccueil = async (input) => {
           `• **Récompenses Vocal :** Gagne des coins simplement en restant en vocal.\n` +
           `• **Braquage du Jeudi :** Trouve le code secret via une énigme chaque jeudi.\n` +
           `• **Heure de Gloire (Aléatoire 20h-23h) :** Tous les gains sont doublés !\n` +
-          `• **Quiz Math :** 5 quiz par jour pour gagner des coins facilement.`,
+          `• **Quiz Math :** 5 quiz par jour pour gagner des coins facilement. \n\n`,
       },
       {
-        name: "👥 COMMU+",
+        name: "<a:1476213141183660104:1477056275501154304> COMMU+",
         value:
           `Accède à cet espace ici : <#1472918469409509418>\n\n` +
           `• **Présentations :** Pour mieux se connaître.\n` +
           `• **Art & Anecdotes :** Partage tes créations et tes histoires.\n` +
           `• **Vote2profil :** Poste ton profil pour recevoir des avis.\n` +
           `• **Les Dossiers :** Poste un dossier croustillant sur quelqu'un !\n` +
-          `• **Confession :** Envoie tes secrets de façon totalement anonyme.`,
+          `• **Confession :** Envoie tes secrets de façon totalement anonyme.\n\n`,
       },
       {
-        name: "✨ RÔLE BUSINESS CLASS",
-        value: `Pour obtenir ton premier rôle, envoie ton premier message dans : <#1469071691941412962>`,
+        name: "<a:1476213141183660104:1477056275501154304> RÔLE BUSINESS CLASS",
+        value: `Pour obtenir ton premier rôle, envoie ton premier message dans : <#1469071691941412962>\n\n`,
       },
       {
-        name: "🛠️ STAFF & SOUTIEN",
+        name: "<a:1476213141183660104:1477056275501154304> STAFF & SOUTIEN",
         value:
           `• **Recrutement :** On recrute activement ! Postule ici : <#1476973824917504082>\n` +
-          `• **Évolution :** Pour soutenir le serveur, tout est expliqué ici : <#1469072587287036059>`,
+          `• **Évolution :** Pour soutenir le serveur, tout est expliqué ici : <#1469072587287036059>\n\n`,
       }
     )
     .setImage("https://i.pinimg.com/originals/32/b3/f2/32b3f2d3a5b95e2df1166288f1cb90a6.gif")
