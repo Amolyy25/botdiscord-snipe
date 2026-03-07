@@ -92,8 +92,7 @@ export const handleSetupAccueil = async (input) => {
           `• **Évolution :** Pour soutenir le serveur, tout est expliqué ici : <#1469072587287036059>\n\n`,
       }
     )
-    .setImage("https://i.pinimg.com/originals/32/b3/f2/32b3f2d3a5b95e2df1166288f1cb90a6.gif")
-    .setFooter({ text: "Le SECTEUR" });
+    .setFooter({ text: "SECTEUR" });
 
   await channel.send({ embeds: [embed] });
 
