@@ -74,9 +74,6 @@ async function buildStatsEmbed(guildId, user) {
         inline: true,
       },
     )
-    .setFooter({
-      text: "La performance est la seule règle.",
-    });
 }
 
 const stats = {
