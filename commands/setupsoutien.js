@@ -22,7 +22,7 @@ export const handleSetupSoutien = async (message) => {
 
   const embed = new EmbedBuilder()
     .setColor("#FFFFFF")
-    .setTitle("SOUTIEN DU SECTEUR")
+    .setTitle("SOUTIEN DU SECTEUR ღ")
     .setDescription(
       "Si vous décidez de soutenir notre serveur, nous vous récompenserons :\n\n" +
       "・<@&1471251878175309985> en mettant « .gg/CXCeH6cwpC » en statut Discord.\n\n" +

@@ -36,6 +36,7 @@ export const handleSetupCommu = async (message) => {
       "**Confession :** Espace dédié pour partager vos pensées de manière anonyme.\n\n" +
       "Pour rejoindre cet espace et obtenir les accès nécessaires, cliquez sur le bouton ci-dessous."
     );
+    .setImage("https://i.pinimg.com/originals/3d/39/14/3d391403693bba06a9f12d6cd9bac8f8.gif")
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
