@@ -30,6 +30,15 @@ import {
   getTotalVoiceMinutes,
   purgeOldStats,
 } from "./statsHelper.js";
+import {
+  handleOpenTicket,
+  handleClaimTicket,
+  handleCloseTicket,
+  handleCloseConfirm,
+  handleCloseCancel,
+  handleAddTicket,
+  handleRemoveTicket,
+} from "./ticketHelper.js";
 
 const TOKEN = process.env.TOKEN;
 const PREFIX = process.env.PREFIX || "=";
@@ -267,6 +276,16 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (commandName === "setupaccueil") {
     await handleSetupAccueil(message);
+    return;
+  }
+
+  if (commandName === "addticket") {
+    await handleAddTicket(message, args);
+    return;
+  }
+
+  if (commandName === "removeticket") {
+    await handleRemoveTicket(message, args);
     return;
   }
 
@@ -891,6 +910,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await handleClaimUnblTicket(interaction);
     } else if (interaction.customId === "unbl_unclaim") {
       await handleUnclaimUnblTicket(interaction);
+    } else if (["ticket_general", "ticket_abus", "ticket_owner"].includes(interaction.customId)) {
+      await handleOpenTicket(interaction);
+    } else if (interaction.customId === "ticket_claim") {
+      await handleClaimTicket(interaction);
+    } else if (interaction.customId === "ticket_close") {
+      await handleCloseTicket(interaction);
+    } else if (interaction.customId === "ticket_close_confirm") {
+      await handleCloseConfirm(interaction);
+    } else if (interaction.customId === "ticket_close_cancel") {
+      await handleCloseCancel(interaction);
     }
   }
 });
