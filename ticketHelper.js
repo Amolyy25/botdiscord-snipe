@@ -324,6 +324,15 @@ export async function handleAddTicket(message, args) {
     return message.reply("Cette commande ne peut être utilisée que dans un ticket.");
   }
 
+  // Check for Staff or Admin roles
+  const hasStaffRole = message.member.roles.cache.has("1474736793063657482") || 
+                       message.member.roles.cache.has("1469071689831940308") ||
+                       message.member.permissions.has(PermissionFlagsBits.Administrator);
+
+  if (!hasStaffRole) {
+    return message.reply("❌ Vous n'avez pas la permission d'ajouter quelqu'un à un ticket.");
+  }
+
   const targetId = args[0]?.replace(/[<@!>]/g, "");
   if (!targetId) {
     return message.reply("Veuillez mentionner un membre ou donner son ID.");
@@ -347,6 +356,15 @@ export async function handleAddTicket(message, args) {
 export async function handleRemoveTicket(message, args) {
   if (!message.channel.topic?.includes("Ticket ID:")) {
     return message.reply("Cette commande ne peut être utilisée que dans un ticket.");
+  }
+
+  // Check for Staff or Admin roles
+  const hasStaffRole = message.member.roles.cache.has("1474736793063657482") || 
+                       message.member.roles.cache.has("1469071689831940308") ||
+                       message.member.permissions.has(PermissionFlagsBits.Administrator);
+
+  if (!hasStaffRole) {
+    return message.reply("❌ Vous n'avez pas la permission de retirer quelqu'un d'un ticket.");
   }
 
   const targetId = args[0]?.replace(/[<@!>]/g, "");
