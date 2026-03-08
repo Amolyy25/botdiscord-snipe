@@ -20,6 +20,8 @@ import { handleFindCommand } from "./commands/find.js";
 import { handleSetupStats } from "./commands/setupstats.js";
 import { handleStatsCommand } from "./commands/stats.js";
 import { handleSetupAccueil } from "./commands/setupaccueil.js";
+import { handleSetupCommu } from "./commands/setupcommu.js";
+import { handleSetupSoutien } from "./commands/setupsoutien.js";
 import {
   initStatsDB,
   recordTextMessage,
@@ -276,6 +278,16 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (commandName === "setupaccueil") {
     await handleSetupAccueil(message);
+    return;
+  }
+
+  if (commandName === "setupcommu") {
+    await handleSetupCommu(message);
+    return;
+  }
+
+  if (commandName === "setupsoutien") {
+    await handleSetupSoutien(message);
     return;
   }
 
@@ -920,6 +932,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await handleCloseConfirm(interaction);
     } else if (interaction.customId === "ticket_close_cancel") {
       await handleCloseCancel(interaction);
+    } else if (interaction.customId === "commu_join") {
+      const COMMU_ROLE_ID = "1472918018970484872";
+      const member = interaction.member;
+      
+      if (member.roles.cache.has(COMMU_ROLE_ID)) {
+        await member.roles.remove(COMMU_ROLE_ID);
+        await interaction.reply({ content: "Accès Commu+ retiré.", ephemeral: true });
+      } else {
+        await member.roles.add(COMMU_ROLE_ID);
+        await interaction.reply({ content: "Accès Commu+ accordé.", ephemeral: true });
+      }
     }
   }
 });
